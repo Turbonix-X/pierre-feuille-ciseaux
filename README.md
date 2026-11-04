@@ -1,5 +1,7 @@
 # Pierre Feuille Ciseaux
 
+**A NOTER:** Ce site est fait à 100% par Intelligence Artifficielle (ou Super Intelligence pour les intimes).
+
 Pierre, feuille, ciseaux en 3D : deux mains animées, des armes qui se battent vraiment, un bot à 20 niveaux et un tournoi jusqu'à 16 joueurs.
 
 **Jouer en ligne : https://turbonix-x.github.io/pierre-feuille-ciseaux/**
