@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Règles de Pierre Feuille Ciseaux — Turbonix</title>
+  <meta name="description" content="Les règles de Pierre Feuille Ciseaux : modes normal, inversé, miroir, aveugle et éclair, tournoi, feu, eau et armes personnalisées.">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <script>
+    // Applique le thème avant l'affichage pour éviter un flash
+    (function () {
+      var prefs = {};
+      try { prefs = JSON.parse(localStorage.getItem("tx-prefs")) || {}; } catch (e) {}
+      var theme = prefs.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="turbonix.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .rules-page .container { grid-template-columns: 1fr; max-width: 900px; }
+    .rules-nav { position: sticky; top: 76px; z-index: 10; }
+    .rules-nav .chip { text-decoration: none; }
+    .rules-card { scroll-margin-top: 150px; line-height: 1.55; }
+    .rules-card ul, .rules-card ol { margin: 8px 0 8px 20px; display: flex; flex-direction: column; gap: 5px; }
+    .rules-card p { margin-bottom: 8px; }
+    .rules-card h2 { margin-bottom: 10px; }
+    .rules-back { margin-top: 18px; }
+    .rules-back .btn { text-decoration: none; }
+    .level-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; list-style: none; margin: 10px 0 0 !important; }
+    .level-list li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); font-size: 0.88rem; line-height: 1.3; }
+    .cycle-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 12px 0; }
+    .cycle { width: min(290px, 100%); height: auto; }
+    .cycle-lines line { stroke: #9b6dff; stroke-width: 2.5; }
+    .cycle-nodes circle { fill: var(--surface-solid); stroke: #ffd60a; stroke-width: 2.5; }
+    .cycle text { text-anchor: middle; fill: var(--text); }
+    .node-emoji { font-size: 20px; }
+    .node-name { font-size: 10.5px; font-weight: 700; }
+    .rules-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.92rem; }
+    .rules-table th, .rules-table td { text-align: left; padding: 7px 8px; border-top: 1px solid var(--border); }
+    .rules-table th { color: var(--muted); font-size: 0.8rem; border-top: none; }
+    @media (max-width: 560px) { .rules-nav { position: static; } }
+  </style>
+</head>
+<body class="rules-page">
+  <div class="bg-blobs" aria-hidden="true"><span></span><span></span><span></span></div>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="site-title">Pierre <span>Feuille</span> Ciseaux</h1>
+      <div class="header-right">
+        <a href="index.html" class="hbtn" title="Retour au jeu" aria-label="Retour au jeu">
+          <svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        </a>
+        <button id="themeBtn" class="theme-toggle" aria-label="Changer de thème" title="Mode sombre / clair">
+          <span class="theme-icon sun">☀️</span>
+          <span class="theme-icon moon">🌙</span>
+        </button>
+        <a href="index.html" class="logo" aria-label="Turbonix Entertainment">
+          <img src="logo.svg" alt="Logo Turbonix" width="44" height="44">
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <nav class="card rules-nav" aria-label="Sommaire des règles">
+      <div class="presets">
+        <a class="chip" href="#normal">🎯 Normal</a>
+        <a class="chip" href="#inverse">🙃 Inversé</a>
+        <a class="chip" href="#miroir">🪞 Miroir</a>
+        <a class="chip" href="#aveugle">🙈 Aveugle</a>
+        <a class="chip" href="#eclair">⚡ Éclair</a>
+        <a class="chip" href="#armes">🔥 Armes</a>
+        <a class="chip" href="#tournoi">🏆 Tournoi</a>
+        <a class="chip" href="#commun">⚙️ Pour tous les modes</a>
+      </div>
+    </nav>
+
+    <section class="card rules-card" id="normal">
+      <h2>🎯 Normal</h2>
+      <p><strong>But :</strong> jouer l’arme qui bat celle de ton adversaire.</p>
+      <ol>
+        <li>Les deux joueurs choisissent en même temps, sans voir le choix de l’autre.</li>
+        <li><strong>La pierre</strong> casse les ciseaux, <strong>les ciseaux</strong> coupent la feuille, <strong>la feuille</strong> enveloppe la pierre.</li>
+        <li>Si vous jouez la même chose, la manche est nulle et ne rapporte aucun point.</li>
+      </ol>
+      <div class="cycle-row" data-cycle="rock,scissors,paper"></div>
+      <p class="info">💡 Une flèche va de l’arme qui gagne vers celle qui perd.</p>
+    </section>
+
+    <section class="card rules-card" id="inverse">
+      <h2>🙃 Inversé</h2>
+      <p><strong>But :</strong> perdre le combat. Les armes s’affrontent normalement, mais c’est le <strong>perdant du combat qui marque le point</strong>.</p>
+      <p>Si tu joues les ciseaux contre la pierre, tes ciseaux sont cassés… et tu gagnes la manche.</p>
+    </section>
+
+    <section class="card rules-card" id="miroir">
+      <h2>🪞 Miroir</h2>
+      <p><strong>But :</strong> jouer la même chose que l’autre, quand c’est à toi de chasser.</p>
+      <ol>
+        <li>À chaque manche, un joueur est le <strong>🎯 chasseur</strong> et l’autre le <strong>🏃 fugitif</strong>.</li>
+        <li>Si vous jouez la même arme, le chasseur marque un point.</li>
+        <li>Si vos armes sont différentes, le fugitif s’échappe et personne ne marque.</li>
+        <li>Les rôles s’échangent à chaque manche.</li>
+      </ol>
+      <p class="info">💡 Tu ne marques que quand tu es chasseur. Quand tu es fugitif, ton seul but est d’empêcher l’autre de marquer.</p>
+    </section>
+
+    <section class="card rules-card" id="aveugle">
+      <h2>🙈 Aveugle</h2>
+      <p><strong>But :</strong> gagner en décidant si tu crois l’ordi. Ce mode se joue uniquement contre l’ordi.</p>
+      <ol>
+        <li>Au début de chaque manche, l’ordi annonce le coup qu’il va jouer.</li>
+        <li>Il dit la vérité, ou il ment, selon les probabilités que tu as choisies dans les réglages.</li>
+        <li>Tu joues, puis les règles normales s’appliquent à son vrai coup.</li>
+      </ol>
+      <p class="info">💡 À partir du niveau 6, ses mensonges sont des pièges : il annonce le coup qui te pousse à jouer ce qu’il sait battre. La probabilité que tu as réglée reste respectée.</p>
+    </section>
+
+    <section class="card rules-card" id="eclair">
+      <h2>⚡ Éclair</h2>
+      <p><strong>But :</strong> les règles normales, avec <strong>2 secondes</strong> pour choisir.</p>
+      <ol>
+        <li>Clique sur <em>Manche suivante</em> ou appuie sur <kbd>Espace</kbd> : le chrono démarre aussitôt.</li>
+        <li>Si tu n’as pas joué à temps, tu perds la manche.</li>
+        <li>À deux, chacun a ses 2 secondes. Si aucun des deux ne joue à temps, la manche est nulle.</li>
+      </ol>
+    </section>
+
+    <section class="card rules-card" id="armes">
+      <h2>🔥 Le feu, l’eau et tes armes</h2>
+      <p>Dans la carte <em>Les armes</em>, tu peux ajouter le feu, l’eau, ou les deux.</p>
+      <div class="cycle-row" data-cycle="rock,scissors,paper,fire,water"></div>
+      <table class="rules-table">
+        <thead><tr><th>Arme</th><th>Elle bat</th><th>Elle perd contre</th><th>Rien contre</th></tr></thead>
+        <tbody>
+          <tr><td>🪨 Pierre</td><td>Ciseaux, eau</td><td>Feuille</td><td>Feu</td></tr>
+          <tr><td>📄 Feuille</td><td>Pierre, eau</td><td>Ciseaux, feu</td><td>—</td></tr>
+          <tr><td>✂️ Ciseaux</td><td>Feuille</td><td>Pierre, eau</td><td>Feu</td></tr>
+          <tr><td>🔥 Feu</td><td>Feuille</td><td>Eau</td><td>Ciseaux, pierre</td></tr>
+          <tr><td>💧 Eau</td><td>Feu, ciseaux</td><td>Feuille, pierre</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <h3>Créer une arme</h3>
+      <ol>
+        <li>Clique sur <em>Créer une arme</em>, donne-lui un nom et importe une image.</li>
+        <li>Pour chaque autre arme, indique si la tienne gagne, perd, ou si rien ne se passe.</li>
+        <li>Le tableau <em>Qui bat qui ?</em> te laisse tout changer d’un clic, sauf pierre, feuille et ciseaux entre eux.</li>
+      </ol>
+    </section>
+
+    <section class="card rules-card" id="tournoi">
+      <h2>🏆 Tournoi</h2>
+      <p><strong>But :</strong> gagner tous tes matchs. Un match perdu, et tu es éliminé.</p>
+      <ol>
+        <li>Choisis de 2 à 16 joueurs. Chacun peut être un humain ou un bot avec son niveau.</li>
+        <li>Le tirage au sort place les joueurs dans le tableau. S’il n’y a pas 4, 8 ou 16 joueurs, certains passent directement au tour suivant.</li>
+        <li>Chaque match se joue avec le mode et la durée choisis.</li>
+        <li>Les matchs entre bots se jouent tout seuls. Tu peux demander à les regarder.</li>
+      </ol>
+    </section>
+
+    <section class="card rules-card" id="commun">
+      <h2>⚙️ Pour tous les modes</h2>
+
+      <h3>Durée de la partie</h3>
+      <ul>
+        <li><strong>Meilleur des 3, 5 ou 10 :</strong> il faut 2, 3 ou 6 points pour gagner. Les manches nulles ne comptent pas. À 5-5, le point suivant décide.</li>
+        <li><strong>Premier à X :</strong> tu choisis le nombre de points, de 1 à 999.</li>
+      </ul>
+
+      <h3>Jouer à deux</h3>
+      <p>Chacun son tour, tu choisis pendant que l’autre regarde ailleurs. Un rideau cache l’écran entre les deux. Les deux coups sont révélés en même temps.</p>
+
+      <h3>Les 20 niveaux de l’ordi</h3>
+      <p>L’ordi décide <strong>avant</strong> que tu joues, et ne voit jamais ton coup. Il apprend seulement de tes manches passées, et il s’en souvient d’une partie à l’autre.</p>
+      <ul class="level-list" id="levelList"></ul>
+
+      <h3>Le cerveau de l’ordi</h3>
+      <p>Après chaque manche, tu vois ce qu’il pensait que tu allais jouer, sa probabilité pour chaque arme, et son raisonnement. Tout reste aussi dans l’historique.</p>
+
+      <h3>Souris, doigt et clavier</h3>
+      <ul>
+        <li><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> : pierre, feuille, ciseaux. Les touches se changent dans les réglages.</li>
+        <li><kbd>R</kbd> : recommencer la partie.</li>
+        <li><kbd>Espace</kbd> : appuyer sur le bouton jaune quand il attend. Pendant un combat, ça accélère.</li>
+        <li>Clique sur la scène pendant un combat pour l’accélérer.</li>
+      </ul>
+
+      <div class="actions rules-back"><a class="btn btn-primary" href="index.html">🎮 Jouer</a></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p><span id="year"></span> Turbonix Entertainment. Tous droits réservés.</p>
+  </footer>
+
+  <script src="js/game.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/regles.js"></script>
+</body>
+</html>

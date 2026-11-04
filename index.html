@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pierre Feuille Ciseaux — Turbonix</title>
+  <meta name="description" content="Pierre, feuille, ciseaux en 3D : mains animées, combats, bot à 20 niveaux, tournoi jusqu'à 16 joueurs, modes inversé, miroir, aveugle et éclair, armes personnalisées.">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <script>
+    // Applique le thème avant l'affichage pour éviter un flash
+    (function () {
+      var prefs = {};
+      try { prefs = JSON.parse(localStorage.getItem("tx-prefs")) || {}; } catch (e) {}
+      var theme = prefs.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="turbonix.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="bg-blobs" aria-hidden="true"><span></span><span></span><span></span></div>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="site-title">Pierre <span>Feuille</span> Ciseaux</h1>
+      <div class="header-right">
+        <a href="regles.html" class="hbtn hide-phone" title="Règles du jeu" aria-label="Règles du jeu">
+          <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2z"/><path d="M4 21a2 2 0 0 0 2 0h14v-2"/><path d="M9 8h7M9 12h5"/></svg>
+        </a>
+        <button id="soundBtn" class="hbtn" aria-pressed="true" title="Sons activés" aria-label="Activer ou couper les sons">
+          <svg class="on" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+          <svg class="off" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>
+        </button>
+        <button id="vibBtn" class="hbtn" aria-pressed="true" title="Vibrations activées" aria-label="Activer ou couper les vibrations">
+          <svg class="on" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M3 8v8"/><path d="M21 8v8"/></svg>
+          <svg class="off" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M3 3l18 18"/></svg>
+        </button>
+        <button id="shareBtn" class="hbtn" title="Partager / sauvegarder" aria-label="Partager la configuration">
+          <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>
+        </button>
+        <button id="clearBtn" class="hbtn danger" title="Remettre les scores à zéro" aria-label="Remettre les scores à zéro">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
+        </button>
+        <button id="themeBtn" class="theme-toggle" aria-label="Changer de thème" title="Mode sombre / clair">
+          <span class="theme-icon sun">☀️</span>
+          <span class="theme-icon moon">🌙</span>
+        </button>
+        <a href="#" class="logo" aria-label="Turbonix Entertainment">
+          <img src="logo.svg" alt="Logo Turbonix" width="44" height="44">
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ===== La partie ===== -->
+    <section class="card full" id="playCard">
+      <div class="play-top">
+        <div id="modeTabs" class="tabs mode-tabs" role="group" aria-label="Mode de jeu">
+          <button class="tab" data-mode="normal"><span class="badge">🎯</span>Normal</button>
+          <button class="tab" data-mode="inverse"><span class="badge">🙃</span>Inversé</button>
+          <button class="tab" data-mode="mirror"><span class="badge">🪞</span>Miroir</button>
+          <button class="tab" data-mode="blind"><span class="badge">🙈</span>Aveugle</button>
+          <button class="tab" data-mode="blitz"><span class="badge">⚡</span>Éclair</button>
+        </div>
+        <a id="rulesLink" class="btn btn-small rules-link" href="regles.html">📖 Règles de ce mode</a>
+      </div>
+      <p id="modeDesc" class="muted small mode-desc"></p>
+
+      <!-- Adversaire -->
+      <div class="opp-row">
+        <div id="oppSwitch" class="pill-switch three" data-active="0" role="group" aria-label="Adversaire">
+          <span class="pill-indicator"></span>
+          <button data-opp="bot" class="active">🤖 L’ordi</button>
+          <button data-opp="human">👥 À deux</button>
+          <button data-opp="tournament">🏆 Tournoi</button>
+        </div>
+        <span id="matchInfo" class="match-info"></span>
+      </div>
+
+      <!-- Le score -->
+      <div id="turnBar" class="turnbar" data-active="0">
+        <span class="turn-glider"></span>
+        <div class="turn-side p0" data-p="0">
+          <span class="turn-name" id="name0"></span><span class="turn-role" id="role0"></span>
+          <span class="turn-score" id="score0">0</span>
+          <span class="pips" id="pips0"></span>
+        </div>
+        <div class="turn-side p1" data-p="1">
+          <span class="turn-name" id="name1"></span><span class="turn-role" id="role1"></span>
+          <span class="turn-score" id="score1">0</span>
+          <span class="pips" id="pips1"></span>
+        </div>
+      </div>
+
+      <!-- Le tournoi : réglage ou tableau -->
+      <div id="tourView" class="tour-view hidden">
+        <div id="tourSetup" class="tour-setup">
+          <div class="card-head tour-head">
+            <h3 class="tour-title">🏆 Prépare ton tournoi</h3>
+            <div class="tour-size">
+              <label for="tourCount" class="look-label tour-count-label">Joueurs : <strong id="tourCountValue">8</strong></label>
+              <input id="tourCount" class="range" type="range" min="2" max="16" step="1" value="8">
+              <div class="presets" id="tourPresets">
+                <button class="chip" data-n="4">4</button>
+                <button class="chip" data-n="8">8</button>
+                <button class="chip" data-n="16">16</button>
+              </div>
+            </div>
+          </div>
+          <div id="tourPlayers" class="tour-players"></div>
+          <div class="tour-tools">
+            <button id="tourRandom" class="btn btn-small">🎲 Noms et niveaux au hasard</button>
+            <label class="switch"><input type="checkbox" id="tourShuffle" checked><span class="switch-track"><span class="switch-thumb"></span></span>Tirage au sort</label>
+            <label class="switch"><input type="checkbox" id="tourWatch"><span class="switch-track"><span class="switch-thumb"></span></span>Regarder les matchs entre bots</label>
+          </div>
+        </div>
+        <div id="tourBracket" class="tour-bracket hidden"></div>
+      </div>
+
+      <div id="arena" class="stage-zone arena">
+        <canvas id="stage3d" class="stage-canvas" aria-label="Les deux mains en 3D"></canvas>
+        <div id="fallback" class="fallback hidden" aria-hidden="true"><span id="fbA">✊</span><span class="fb-vs">VS</span><span id="fbB">✊</span></div>
+        <div id="chant" class="chant" aria-hidden="true"></div>
+        <div id="bubble" class="bubble hidden"></div>
+        <div id="blitzRing" class="blitz-ring hidden" aria-live="off"><span id="blitzText">2,0</span></div>
+        <div id="curtain" class="curtain hidden">
+          <span class="curtain-eye">🙈</span>
+          <strong id="curtainTitle"></strong>
+          <span id="curtainText" class="small"></span>
+        </div>
+      </div>
+
+      <p id="status" class="result status" aria-live="polite"></p>
+      <p id="moveInfo" class="muted small move-info"></p>
+
+      <div id="weaponGrid" class="weapon-grid" role="group" aria-label="Choisis ton coup"></div>
+
+      <div class="actions play-actions">
+        <button id="mainBtn" class="btn btn-primary">🔁 Rejouer</button>
+        <button id="brainBtn" class="btn btn-ghost">🧠 Le cerveau de l’ordi</button>
+        <button id="bracketBtn" class="btn btn-ghost hidden">📊 Le tableau</button>
+        <button id="tourResetBtn" class="btn btn-ghost hidden">♻️ Nouveau tournoi</button>
+      </div>
+      <p id="hint" class="hint"></p>
+    </section>
+
+    <!-- ===== Réglages ===== -->
+    <section class="card">
+      <div class="card-head"><h2>Réglages</h2></div>
+
+      <div id="levelBox" class="setting">
+        <div class="look-label">Niveau de l’ordi : <strong id="levelName"></strong></div>
+        <div id="levelChips" class="presets level-chips" role="group" aria-label="Niveau de l'ordi"></div>
+        <p id="levelNote" class="muted small"></p>
+      </div>
+
+      <div class="setting">
+        <div class="look-label">Durée de la partie</div>
+        <div id="formatChips" class="presets" role="group" aria-label="Durée de la partie">
+          <button class="chip" data-bo="3">Meilleur des 3</button>
+          <button class="chip" data-bo="5">Meilleur des 5</button>
+          <button class="chip" data-bo="10">Meilleur des 10</button>
+          <button class="chip" data-first="1">🏁 Premier à X</button>
+        </div>
+        <div id="firstBox" class="field first-box hidden">
+          <label for="firstTo">Nombre de points pour gagner <small>(de 1 à 999)</small></label>
+          <div class="field-row">
+            <input id="firstTo" type="number" min="1" max="999" step="1" value="5">
+            <button id="firstRandom" class="icon-btn" type="button" title="Au hasard" aria-label="Nombre de points au hasard">🎲</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="blindBox" class="setting hidden">
+        <div class="look-label">🙈 Est-ce que l’ordi dit la vérité ?</div>
+        <p class="muted small blind-help">Tu peux écrire <code>25</code>, <code>25%</code>, <code>1/4</code> ou <code>1:3</code>. Le total reste à 100 %.</p>
+        <div class="presets blind-presets" id="blindPresets">
+          <button class="chip" data-truth="100">😇 Toujours vrai</button>
+          <button class="chip" data-truth="75">Plutôt vrai</button>
+          <button class="chip" data-truth="50">⚖️ 50 / 50</button>
+          <button class="chip" data-truth="25">Plutôt faux</button>
+          <button class="chip" data-truth="0">🤥 Toujours faux</button>
+        </div>
+        <div class="prob-list blind-probs" id="blindProbs"></div>
+      </div>
+
+      <div class="setting">
+        <div class="look-label">La main en 3D</div>
+        <div id="handSwitch" class="pill-switch wide" data-active="0" role="group" aria-label="Façon de jouer de la main">
+          <span class="pill-indicator"></span>
+          <button data-hand="gesture" class="active">✊ Fait le geste</button>
+          <button data-hand="object">✂️ Sort l’objet</button>
+        </div>
+        <p id="handNote" class="muted small"></p>
+      </div>
+
+      <div class="setting">
+        <div class="look-label">Vitesse des animations : <strong id="speedName"></strong></div>
+        <div id="speedChips" class="presets" role="group" aria-label="Vitesse des animations">
+          <button class="chip" data-speed="0.5">×0,5</button>
+          <button class="chip" data-speed="1">×1</button>
+          <button class="chip" data-speed="1.5">×1,5</button>
+          <button class="chip" data-speed="2">×2</button>
+          <button class="chip" data-speed="3">×3</button>
+          <button class="chip" data-speed="40">⚡ Instantané</button>
+        </div>
+      </div>
+
+      <div class="setting">
+        <div class="look-label key-head"><span>⌨️ Les touches</span><button id="keysReset" class="btn btn-small">Réinitialiser</button></div>
+        <p class="muted small">Clique sur une touche, puis appuie sur celle que tu veux à la place.</p>
+        <div id="keyList" class="key-list"></div>
+      </div>
+    </section>
+
+    <!-- ===== Le cerveau ===== -->
+    <section class="card" id="brainCard">
+      <div class="card-head"><h2>🧠 Le cerveau de l’ordi</h2></div>
+      <div id="brainBody" class="brain"></div>
+      <details class="help">
+        <summary>L’ordi triche-t-il ?</summary>
+        <ul>
+          <li>Non. Il décide <strong>avant</strong> que tu joues, et ne regarde jamais ton choix. Il se sert seulement de tes manches passées.</li>
+          <li>Ce panneau reste caché pendant que tu choisis. Il ne se remplit qu’à la fin de la manche.</li>
+          <li>Si tu joues vraiment au hasard, même le niveau 20 ne peut pas te battre sur la durée. Mais il est très difficile de jouer vraiment au hasard.</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- ===== Personnalisation ===== -->
+    <section class="card full" id="cosCard">
+      <div class="card-head">
+        <h2>Personnalisation</h2>
+        <button id="cosCopy" class="btn btn-small"></button>
+      </div>
+      <div id="cosTabs" class="tabs" role="group" aria-label="Joueur à personnaliser">
+        <button class="tab active" data-side="0"><span class="badge">A</span><span id="cosTab0"></span></button>
+        <button class="tab" data-side="1"><span class="badge b">B</span><span id="cosTab1"></span></button>
+      </div>
+      <div class="cos-name field">
+        <label for="cosName">Nom du joueur</label>
+        <input id="cosName" type="text" maxlength="18">
+      </div>
+      <div class="cos-grid">
+        <div class="cos-panel">
+          <div class="cos-head"><h3>✋ La main</h3><img id="previewHand" class="cos-preview" alt="Aperçu de la main"></div>
+          <div class="look-label">Couleur de peau</div>
+          <div id="skinField"></div>
+        </div>
+        <div class="cos-panel">
+          <div class="cos-head"><h3>🪨 La pierre</h3><img id="previewRock" class="cos-preview" alt="Aperçu de la pierre"></div>
+          <div class="look-label">Nuance</div>
+          <div id="rockShades" class="swatches"></div>
+          <div class="look-label cos-sub">Motif</div>
+          <div id="rockPatterns" class="presets"></div>
+        </div>
+        <div class="cos-panel">
+          <div class="cos-head"><h3>✂️ Les ciseaux</h3><img id="previewScissors" class="cos-preview" alt="Aperçu des ciseaux"></div>
+          <div class="look-label">Couleur des poignées</div>
+          <div id="scissorsField"></div>
+          <label class="switch cos-sub"><input type="checkbox" id="rustSwitch"><span class="switch-track"><span class="switch-thumb"></span></span>Rouillés <small class="muted">(pour le style seulement)</small></label>
+        </div>
+        <div class="cos-panel cos-pad">
+          <div class="cos-head"><h3>📄 La feuille</h3></div>
+          <div class="pad-wrap">
+            <div class="pad" id="pad">
+              <canvas id="padBack" width="480" height="630"></canvas>
+              <canvas id="padInk" width="480" height="630" aria-label="Dessine sur la feuille"></canvas>
+            </div>
+            <div class="pad-tools">
+              <div class="field">
+                <label for="padText">Ce qui est écrit</label>
+                <textarea id="padText" class="input pad-text" rows="2" maxlength="60" placeholder="Ton texte…"></textarea>
+              </div>
+              <div class="look-label">Encre</div>
+              <div id="padColors" class="swatches"></div>
+              <div class="look-label cos-sub">Crayon</div>
+              <div class="presets" id="padTools">
+                <button class="chip" data-size="5">Fin</button>
+                <button class="chip" data-size="10">Moyen</button>
+                <button class="chip" data-size="20">Gros</button>
+                <button class="chip" data-tool="eraser">🧽 Gomme</button>
+              </div>
+              <div class="field-row wrap pad-actions">
+                <button id="padUndo" class="btn btn-small">↩️ Annuler</button>
+                <button id="padClear" class="btn btn-small">🗑 Tout effacer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Les armes ===== -->
+    <section class="card full" id="armsCard">
+      <div class="card-head">
+        <h2>Les armes</h2>
+        <button id="addWeapon" class="btn btn-small">➕ Créer une arme</button>
+      </div>
+      <p class="muted small arms-help">Ajoute le feu et l’eau, ou crée tes propres armes avec ton image. Changer d’armes relance la partie.</p>
+      <div id="armsList" class="arms-list"></div>
+      <div class="divider">
+        <div class="look-label key-head"><span>Qui bat qui ?</span><button id="matrixReset" class="btn btn-small">Réinitialiser</button></div>
+        <p class="muted small">Lis la ligne contre la colonne. Clique sur une case pour la changer (pierre, feuille et ciseaux restent fixes entre eux).</p>
+        <div id="matrix" class="compare-table matrix"></div>
+        <p id="matrixWarn" class="warn hidden"></p>
+      </div>
+    </section>
+
+    <!-- ===== Historique ===== -->
+    <section class="card" id="historyCard">
+      <div class="card-head">
+        <h2>Historique des manches</h2>
+        <button id="historyClear" class="btn btn-small">🧹 Vider</button>
+      </div>
+      <div id="historyList" class="round-list"></div>
+    </section>
+
+    <!-- ===== Scores ===== -->
+    <section class="card">
+      <div class="card-head"><h2>Tableau des scores</h2></div>
+      <div class="kpis">
+        <div class="kpi"><span class="kpi-value" id="kpiRounds">0</span><span class="kpi-label">Manches</span></div>
+        <div class="kpi"><span class="kpi-value" id="kpiMatches">0</span><span class="kpi-label">Parties</span></div>
+        <div class="kpi"><span class="kpi-value" id="kpiRate">—</span><span class="kpi-label">Manches gagnées</span></div>
+        <div class="kpi"><span class="kpi-value" id="kpiStreak">—</span><span class="kpi-label">Série en cours</span></div>
+      </div>
+      <div class="look-label">Tes coups</div>
+      <div id="weaponBars" class="bars"></div>
+      <details class="help">
+        <summary>Comment ça marche ?</summary>
+        <ul>
+          <li>Ces chiffres comptent tes parties à toi, contre l’ordi. Les parties à deux et les matchs entre bots n’y entrent pas.</li>
+          <li>La <strong>série</strong> compte tes manches gagnées d’affilée. Une manche nulle ne l’arrête pas, une défaite la remet à zéro.</li>
+          <li>Un joueur prévisible se reconnaît ici : si une barre est bien plus grande que les autres, l’ordi l’a déjà vue.</li>
+          <li>La 🗑 en haut de la page remet tout à zéro.</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- ===== Par niveau ===== -->
+    <section class="card full">
+      <div class="card-head"><h2>Contre l’ordi, niveau par niveau</h2></div>
+      <div class="compare-table level-table">
+        <table>
+          <thead><tr><th>Niveau</th><th title="Parties jouées">Parties</th><th title="Parties gagnées">V</th><th title="Parties perdues">D</th><th title="Manches gagnées">Manches +</th><th title="Manches perdues">Manches −</th><th class="col-rate">Manches gagnées</th></tr></thead>
+          <tbody id="levelRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p><span id="year"></span> Turbonix Entertainment. Tous droits réservés.</p>
+  </footer>
+
+  <!-- Partage & fichier -->
+  <dialog id="shareDialog" class="dialog">
+    <form method="dialog" class="dialog-close"><button aria-label="Fermer">✕</button></form>
+    <h2>Partager &amp; sauvegarder</h2>
+
+    <h3>🔗 Lien de tes réglages</h3>
+    <p class="muted small">Envoie ce lien à tes amis : ils retrouvent ton mode, ton niveau, tes couleurs et le texte de tes feuilles. Les dessins et les images importées restent trop lourds pour un lien : ils passent par le fichier.</p>
+    <div class="field-row">
+      <input id="shareLink" class="input grow" type="text" readonly aria-label="Lien de partage">
+      <button id="copyLinkBtn" class="btn btn-small">Copier</button>
+    </div>
+
+    <h3>💾 Fichier de sauvegarde</h3>
+    <p class="muted small">Tout est déjà sauvegardé automatiquement sur cet appareil (dans le navigateur). Le fichier garde aussi tes dessins, tes armes et tes scores.</p>
+    <div class="field-row wrap">
+      <button id="exportBtn" class="btn btn-small">Télécharger le fichier (.json)</button>
+      <label class="btn btn-small file-btn">Ouvrir un fichier…
+        <input id="importInput" type="file" accept=".json,application/json" hidden>
+      </label>
+    </div>
+    <p id="importError" class="error hidden"></p>
+  </dialog>
+
+  <!-- Confirmation -->
+  <dialog id="confirmDialog" class="dialog small">
+    <h2>Remettre les scores à zéro ?</h2>
+    <p>Est-ce que vous voulez vraiment tout effacer ? Les scores, l’historique et ce que l’ordi a appris sur vous seront effacés. Cette action est définitive.</p>
+    <form method="dialog" class="dialog-actions">
+      <button value="cancel" class="btn btn-small">Annuler</button>
+      <button value="ok" class="btn btn-small btn-danger">Oui, tout effacer</button>
+    </form>
+  </dialog>
+
+  <dialog id="deleteDialog" class="dialog small">
+    <h2>Supprimer cette arme ?</h2>
+    <p id="deleteText"></p>
+    <form method="dialog" class="dialog-actions">
+      <button value="cancel" class="btn btn-small">Annuler</button>
+      <button value="ok" class="btn btn-small btn-danger">Oui, la supprimer</button>
+    </form>
+  </dialog>
+
+  <!-- Créer ou modifier une arme -->
+  <dialog id="weaponDialog" class="dialog">
+    <form method="dialog" class="dialog-close"><button aria-label="Fermer">✕</button></form>
+    <h2 id="weaponTitle">Créer une arme</h2>
+    <div class="weapon-edit">
+      <label class="weapon-image" for="weaponFile" title="Importer une image">
+        <img id="weaponPreview" class="hidden" alt="Image de l'arme">
+        <span id="weaponPlaceholder">🖼️<br><small>Importer une image</small></span>
+        <input id="weaponFile" type="file" accept="image/*" hidden>
+      </label>
+      <div class="weapon-fields">
+        <div class="field">
+          <label for="weaponName">Son nom</label>
+          <input id="weaponName" class="input grow" type="text" maxlength="18" placeholder="Bombe, Pistolet à eau…">
+        </div>
+        <div class="field">
+          <label for="weaponVerb">Ce qu’elle fait <small>(« Bombe <em>explose</em> la pierre »)</small></label>
+          <input id="weaponVerb" class="input grow" type="text" maxlength="18" placeholder="bat">
+        </div>
+      </div>
+    </div>
+    <p id="weaponError" class="error hidden"></p>
+    <h3>Contre les autres armes</h3>
+    <div id="weaponRelations" class="weapon-relations"></div>
+    <div class="dialog-actions">
+      <button id="weaponDelete" type="button" class="btn btn-small btn-danger hidden">Supprimer</button>
+      <button id="weaponSave" type="button" class="btn btn-small">Enregistrer</button>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <canvas id="confetti" class="confetti" aria-hidden="true"></canvas>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/textures.js"></script>
+  <script src="js/stage3d.js"></script>
+  <script src="js/tournament.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
