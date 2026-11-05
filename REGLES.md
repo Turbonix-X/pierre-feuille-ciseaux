@@ -7,8 +7,9 @@ Les mêmes règles sont sur la page [`regles.html`](regles.html) du site, avec d
 | 🎯 Normal | Celui dont l'arme bat l'autre | Ordi, à deux, tournoi |
 | 🙃 Inversé | Celui dont l'arme **perd** le combat | Ordi, à deux, tournoi |
 | 🪞 Miroir | Le chasseur, s'il joue le même coup que le fugitif | Ordi, à deux, tournoi |
+| 🤝 Duo | Les deux ensemble, s'ils font le même signe | Ordi, à deux |
 | 🙈 Aveugle | Comme en normal, mais l'ordi annonce son coup, et il peut mentir | Ordi, tournoi (contre les bots) |
-| ⚡ Éclair | Comme en normal, avec 2 secondes pour choisir | Ordi, à deux, tournoi |
+| ⚡ Éclair | Comme en normal, avec 2, 5 ou 10 secondes pour choisir | Ordi, à deux, tournoi |
 
 ## 🎯 Normal
 
@@ -27,6 +28,16 @@ Les armes s'affrontent normalement, mais c'est le **perdant du combat qui marque
 3. Si vos armes sont différentes, le fugitif s'échappe et personne ne marque.
 4. Les rôles s'échangent à chaque manche.
 
+## 🤝 Duo
+
+Vous jouez dans la même équipe, contre l'ordi ou à deux.
+
+1. Si vous jouez la même arme, l'équipe marque un point. Sinon, c'est un raté.
+2. **Meilleur des 3, 5 ou 10 :** vous gagnez ensemble si les réussites arrivent au but avant les ratés. Sinon, vous perdez ensemble.
+3. **Premier à X :** vous continuez jusqu'à X réussites, et les ratés sont seulement comptés.
+
+Ce mode ne se joue pas en tournoi.
+
 ## 🙈 Aveugle
 
 1. Au début de chaque manche, l'ordi annonce le coup qu'il va jouer.
@@ -37,9 +48,12 @@ Les armes s'affrontent normalement, mais c'est le **perdant du combat qui marque
 
 ## ⚡ Éclair
 
-1. Le chrono de 2 secondes démarre quand tu cliques sur *Manche suivante* ou que tu appuies sur `Espace`.
-2. Si tu n'as pas joué à temps, tu perds la manche.
-3. À deux, chacun a ses 2 secondes. Si aucun des deux ne joue à temps, la manche est nulle.
+Tu as 2, 5 ou 10 secondes pour choisir (2 par défaut).
+
+1. Le chrono démarre quand tu cliques sur *C'est parti* ou que tu appuies sur `Espace`.
+2. Contre un bot, les manches s'enchaînent ensuite toutes seules. Le bouton *Pause* arrête l'enchaînement entre deux manches.
+3. Si tu n'as pas joué à temps, tu perds la manche.
+4. À deux, chacun a son temps, et on clique avant chaque tour. Si aucun des deux ne joue à temps, la manche est nulle.
 
 ## 🔥 Le feu, l'eau et tes armes
 
@@ -53,7 +67,7 @@ Le feu et l'eau s'activent dans la carte *Les armes*.
 | 🔥 Feu | Feuille | Eau | Ciseaux, pierre |
 | 💧 Eau | Feu, ciseaux | Feuille, pierre | — |
 
-Pour créer une arme : donne-lui un nom, importe une image, puis indique pour chaque autre arme si la tienne gagne, perd, ou si rien ne se passe. Le tableau *Qui bat qui ?* permet de tout changer d'un clic, sauf pierre, feuille et ciseaux entre eux.
+Pour créer une arme : donne-lui un nom et une image, choisis son attaque (fonce, éjecte, explose, écrase, tranche, aspire ou foudroie, chacune avec son animation) et le signe de sa main, puis indique pour chaque autre arme si la tienne gagne, perd, ou si rien ne se passe. Le tableau *Qui bat qui ?* permet de tout changer d'un clic, sauf pierre, feuille et ciseaux entre eux.
 
 ## 🏆 Tournoi
 

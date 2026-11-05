@@ -30,6 +30,17 @@ const Rules = (() => {
     return out;
   })();
 
+  // Les attaques au choix pour une arme créée : chacune a son animation
+  const ATTACKS = {
+    charge: { label: "💥 Fonce", verb: "fonce sur" },
+    eject: { label: "🚀 Éjecte", verb: "éjecte" },
+    explode: { label: "🧨 Explose", verb: "explose" },
+    crush: { label: "🔨 Écrase", verb: "écrase" },
+    slice: { label: "🗡️ Tranche", verb: "tranche" },
+    suck: { label: "🌀 Aspire", verb: "aspire" },
+    zap: { label: "⚡ Foudroie", verb: "foudroie" },
+  };
+
   const SENTENCES = {
     "rock>scissors": "La pierre casse les ciseaux",
     "scissors>paper": "Les ciseaux coupent la feuille",
@@ -69,7 +80,7 @@ const Rules = (() => {
     if (SENTENCES[key] && DEFAULT_RELATIONS[pairKey(winner, loser)] === (winner < loser ? 1 : -1)) return SENTENCES[key];
     const w = set.weapons[winner];
     const l = set.weapons[loser];
-    if (w.custom && w.verb) return `${w.the} ${w.verb} ${l.obj}`;
+    if (w.custom) return `${w.the} ${(ATTACKS[w.attack] || ATTACKS.charge).verb} ${l.obj}`;
     return `${w.the} ${/^(Les) /.test(w.the) ? "battent" : "bat"} ${l.obj}`;
   }
 
@@ -85,13 +96,14 @@ const Rules = (() => {
     normal: { name: "Normal", emoji: "🎯", anchor: "normal" },
     inverse: { name: "Inversé", emoji: "🙃", anchor: "inverse" },
     mirror: { name: "Miroir", emoji: "🪞", anchor: "miroir" },
+    duo: { name: "Duo", emoji: "🤝", anchor: "duo" },
     blind: { name: "Aveugle", emoji: "🙈", anchor: "aveugle" },
     blitz: { name: "Éclair", emoji: "⚡", anchor: "eclair" },
   };
 
   /* Résultat d'une manche.
      a, b : armes jouées (null si le joueur a laissé filer le temps).
-     Renvoie winner (0, 1 ou -1 pour personne), raw (qui gagne le combat, avant inversion) et le texte. */
+     Renvoie winner (0, 1, 2 pour les deux ensemble, -1 pour personne), raw (qui gagne le combat, avant inversion) et le texte. */
   function evaluate(set, mode, a, b, hunter = 0) {
     if (a === null && b === null) return { winner: -1, raw: 0, late: [true, true], text: "Personne n’a joué à temps" };
     if (a === null) return { winner: 1, raw: -1, late: [true, false], text: "Trop tard : la manche est perdue" };
@@ -100,6 +112,10 @@ const Rules = (() => {
     if (mode === "mirror") {
       if (a === b) return { winner: hunter, raw: 0, late, same: true, text: `${set.weapons[a].the} des deux côtés : le chasseur a visé juste` };
       return { winner: -1, raw: 0, late, same: false, text: "Coups différents : le fugitif s’échappe" };
+    }
+    if (mode === "duo") {
+      if (a === b) return { winner: 2, raw: 0, late, same: true, text: `${set.weapons[a].the} des deux côtés : vous êtes synchronisés` };
+      return { winner: -1, raw: 0, late, same: false, fail: true, text: "Coups différents : raté" };
     }
     const raw = set.rel(a, b);
     if (raw === 0) return { winner: -1, raw, late, text: neutralSentence(set, a, b) };
@@ -118,6 +134,19 @@ const Rules = (() => {
 
   function addRound(match, round) {
     match.rounds.push(round);
+    // Duo : la colonne 0 compte les réussites, la colonne 1 les ratés. match.winner vaut 2 (gagné ensemble) ou 3 (perdu ensemble).
+    if (match.mode === "duo") {
+      if (round.winner === 2) match.score[0]++;
+      else match.score[1]++;
+      if (match.score[0] >= match.target) {
+        match.over = true;
+        match.winner = 2;
+      } else if (match.format.type === "bo" && match.score[1] >= match.target) {
+        match.over = true;
+        match.winner = 3;
+      }
+      return;
+    }
     if (round.winner === 0 || round.winner === 1) match.score[round.winner]++;
     else match.draws++;
     if (match.mode === "mirror") match.hunter = 1 - match.hunter;
@@ -127,5 +156,5 @@ const Rules = (() => {
     }
   }
 
-  return { BUILTIN, CLASSIC, MODES, DEFAULT_RELATIONS, pairKey, makeSet, sentence, neutralSentence, evaluate, targetOf, formatLabel, createMatch, addRound };
+  return { BUILTIN, CLASSIC, MODES, ATTACKS, DEFAULT_RELATIONS, pairKey, makeSet, sentence, neutralSentence, evaluate, targetOf, formatLabel, createMatch, addRound };
 })();

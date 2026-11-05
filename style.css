@@ -396,6 +396,17 @@ button.m-cell:hover { border-color: var(--mauve); transform: scale(1.1); }
 :root[data-theme="dark"] .m-cell.lose { color: #ff6b9a; }
 .m-cell.locked { cursor: default; }
 
+/* Le signe de la main d'une arme créée */
+.field-title { font-weight: 600; font-size: 0.9rem; }
+.weapon-fields .small { margin: 2px 0 0; line-height: 1.35; }
+.hand-edit { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }
+.hand-preview { width: 112px; height: 112px; flex-shrink: 0; padding: 4px; border-radius: 16px; background: var(--stage-bg); border: 1px solid var(--border); }
+.hand-controls { flex: 1; min-width: 230px; display: flex; flex-direction: column; gap: 8px; }
+.hand-fingers { display: flex; flex-direction: column; gap: 4px; }
+.finger-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.85rem; font-weight: 700; }
+.finger-row .presets { gap: 4px; flex-wrap: nowrap; }
+.finger-row .chip { padding: 2px 9px; font-size: 0.78rem; }
+
 /* Fenêtre de création */
 .weapon-edit { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
 .weapon-image {

@@ -131,7 +131,7 @@ const BotAI = (() => {
     },
     modelsMe: {
       label: "Tu essaies de me contrer",
-      why: (x) => `Je joue beaucoup ${x.name(x.myFav)} : j’ai pensé que tu allais jouer ${x.name(x.pick)} pour me contrer.`,
+      why: (x) => `Je joue beaucoup ${x.name(x.myFav)} : j’ai pensé que tu allais jouer ${x.name(x.pick)} à cause de ça.`,
       run: (H, n, ctx) => {
         if (H.length < 3) return null;
         const c = counts(n);
@@ -177,12 +177,14 @@ const BotAI = (() => {
     // Ce que vaut mon coup m face au coup o de l'adversaire
     const util = (m, o) => {
       if (mode === "inverse") return -rel(m, o);
+      if (mode === "duo") return m === o ? 1 : 0;
       if (mode === "mirror") return isHunter ? (m === o ? 1 : 0) : (m === o ? -1 : 0);
       return rel(m, o);
     };
     // Ce que vaut le coup o de l'adversaire face à mon coup m
     const oppUtil = (o, m) => {
       if (mode === "inverse") return -rel(o, m);
+      if (mode === "duo") return o === m ? 1 : 0;
       if (mode === "mirror") return isHunter ? (o === m ? -1 : 0) : (o === m ? 1 : 0);
       return rel(o, m);
     };
@@ -340,8 +342,13 @@ const BotAI = (() => {
         : `${why} Mais tu penses que je le sais, et je sais que tu le penses : j’ai encore changé mon pronostic.`;
     }
 
+    if (options.mode === "duo" && chosen) {
+      label = PREDICTORS[chosen.key].label;
+      why = `${PREDICTORS[chosen.key].why(words)} Comme on doit jouer la même chose, j’ai visé ce coup-là.`;
+    }
+
     let mistake = false;
-    if (cfg.guard) {
+    if (cfg.guard && options.mode !== "duo") {
       const decisive = H.slice(-14).filter((r) => r.out !== 0);
       if (decisive.length >= 8) {
         const lost = decisive.filter((r) => r.out < 0).length / decisive.length;

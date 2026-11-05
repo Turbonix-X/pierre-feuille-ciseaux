@@ -13,8 +13,9 @@ Pierre, feuille, ciseaux en 3D : deux mains animées, des armes qui se battent v
 - 🎯 **Normal** : le jeu classique.
 - 🙃 **Inversé** : c'est le perdant du combat qui marque le point.
 - 🪞 **Miroir** : le chasseur marque s'il joue le même coup que le fugitif.
+- 🤝 **Duo** : faites le même signe pour gagner tous les deux.
 - 🙈 **Aveugle** : l'ordi annonce son coup à l'avance, et tu règles ses chances de mentir.
-- ⚡ **Éclair** : 2 secondes pour choisir, sinon tu perds la manche.
+- ⚡ **Éclair** : 2, 5 ou 10 secondes pour choisir, sinon tu perds la manche. Contre un bot, les manches s'enchaînent.
 
 **Toutes les règles, mode par mode : [REGLES.md](REGLES.md)**, et aussi sur la page `regles.html` du site.
 
@@ -30,8 +31,9 @@ Pierre, feuille, ciseaux en 3D : deux mains animées, des armes qui se battent v
 
 ### Les animations
 
-- La main fait le geste, ou **sort le vrai objet** : la feuille se déroule, les ciseaux claquent.
-- Les armes se battent : les ciseaux coupent la feuille, la pierre écrase les ciseaux, la feuille enveloppe la pierre, le feu brûle la feuille, l'eau éteint le feu et fait rouiller les ciseaux.
+- **Fait le signe :** pas d'objet, les mains font le signe et se battent entre elles.
+- **Sort l'objet :** la main tient la pierre dans sa paume, pince la feuille, passe ses doigts dans les ciseaux, puis lance l'objet.
+- Les objets se battent : les ciseaux coupent la feuille, la pierre écrase les ciseaux, la feuille enveloppe la pierre, le feu brûle la feuille, l'eau éteint le feu et fait rouiller les ciseaux.
 - Tu choisis la vitesse, de ×0,5 à instantané. Un clic sur la scène accélère le combat en cours.
 
 ### Personnaliser
@@ -46,7 +48,7 @@ Pour chaque joueur :
 ### Les armes
 
 - Ajoute le **feu** et l'**eau**.
-- **Crée tes armes** : un nom, une image importée, et contre qui elles gagnent ou perdent.
+- **Crée tes armes** : un nom, une image importée, une attaque animée (fonce, éjecte, explose, écrase, tranche, aspire, foudroie), le signe de la main, et contre qui elles gagnent ou perdent.
 
 ### Le cerveau de l'ordi
 

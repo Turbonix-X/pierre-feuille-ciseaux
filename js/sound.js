@@ -183,6 +183,23 @@ const Sound = (() => {
     sparkle: play((c) => {
       [1568, 1975.5, 2349.3, 3136].forEach((f, k) => tone(c, { freq: f, peak: 0.05, attack: 0.002, decay: 0.34, when: k * 0.055, send: 0.9 }));
     }),
+    // --- Les attaques des armes personnalisées ---
+    eject: play((c) => {
+      tone(c, { type: "triangle", freq: 300, to: 2000, peak: 0.14, attack: 0.01, decay: 0.48, send: 0.6 });
+      burstOf(c, { freq: 700, sweepTo: 3600, q: 1, peak: 0.13, attack: 0.03, decay: 0.42, send: 0.5 });
+    }),
+    charge: play((c) => {
+      tone(c, { type: "sawtooth", freq: 90, to: 700, peak: 0.1, attack: 0.44, decay: 0.05, send: 0.3 });
+      burstOf(c, { freq: 500, sweepTo: 4200, q: 3, peak: 0.1, attack: 0.44, decay: 0.05, send: 0.3 });
+    }),
+    suck: play((c) => {
+      burstOf(c, { freq: 4200, sweepTo: 240, q: 2, peak: 0.2, attack: 0.65, decay: 0.3, send: 0.6 });
+      tone(c, { type: "sine", freq: 950, to: 75, peak: 0.16, attack: 0.1, decay: 0.85, send: 0.6 });
+    }),
+    zap: play((c, strength = 1) => {
+      for (let k = 0; k < 7; k++) burstOf(c, { type: "highpass", freq: 2200 + Math.random() * 4400, peak: 0.13 * strength, attack: 0.001, decay: 0.014, when: k * 0.016 + Math.random() * 0.005, send: 0.35 });
+      tone(c, { type: "sawtooth", freq: 1300, to: 120, peak: 0.11 * strength, attack: 0.001, decay: 0.12, send: 0.5 });
+    }),
     // --- Les résultats ---
     win: play((c) => {
       [659.3, 830.6, 987.8, 1318.5].forEach((f, k) => tone(c, { type: "triangle", freq: f, peak: 0.13, attack: 0.008, decay: 0.42, when: k * 0.075, send: 0.7 }));

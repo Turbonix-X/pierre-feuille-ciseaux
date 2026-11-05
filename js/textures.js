@@ -209,8 +209,13 @@ const Textures = (() => {
     if (inkImages.size > 8) inkImages.delete(inkImages.keys().next().value);
   }
 
-  // Dessine le fond de la feuille (papier, lignes, texte). Sert aussi au pad de personnalisation.
-  function drawPaper(c2d, W, H, paper) {
+  // Charge des images à l'avance, pour pouvoir les dessiner aussitôt
+  function preload(urls) {
+    return Promise.all(urls.filter(Boolean).map((url) => new Promise((resolve) => loadInk(url, resolve))));
+  }
+
+  // Le papier seul : la gomme ne touche jamais les lignes
+  function drawPaperBase(c2d, W, H) {
     c2d.fillStyle = "#fbf8ee";
     c2d.fillRect(0, 0, W, H);
     const step = H / 15;
@@ -227,6 +232,9 @@ const Textures = (() => {
     c2d.moveTo(W * 0.12, 0);
     c2d.lineTo(W * 0.12, H);
     c2d.stroke();
+  }
+
+  function drawPaperText(c2d, W, H, paper) {
     const text = (paper && paper.text ? paper.text : "").trim();
     if (!text) return;
     c2d.fillStyle = (paper && paper.textColor) || "#2b2640";
@@ -270,14 +278,16 @@ const Textures = (() => {
     const W = 512, H = 672;
     const c = canvas(W, H);
     const c2d = c.getContext("2d");
-    drawPaper(c2d, W, H, paper);
+    drawPaperBase(c2d, W, H);
+    // Texte gommé : on dessine ce qu'il en reste, sinon le texte entier
+    if (!(paper && paper.textInk)) drawPaperText(c2d, W, H, paper);
     const t = texture(c);
-    if (paper && paper.ink) {
-      loadInk(paper.ink, (img) => {
+    [paper && paper.textInk, paper && paper.ink].filter(Boolean).forEach((url) => {
+      loadInk(url, (img) => {
         c2d.drawImage(img, 0, 0, W, H);
         t.needsUpdate = true;
       });
-    }
+    });
     return t;
   }
 
@@ -415,5 +425,5 @@ const Textures = (() => {
     return texture(c);
   }
 
-  return { noise3, fbm, ROCK_PATTERNS, rockTexture, rockRadius, rustTexture, drawPaper, paperTexture, customTexture, softDot, puff, burnNoise, felt };
+  return { noise3, fbm, ROCK_PATTERNS, rockTexture, rockRadius, rustTexture, drawPaperBase, drawPaperText, preload, paperTexture, customTexture, softDot, puff, burnNoise, felt };
 })();

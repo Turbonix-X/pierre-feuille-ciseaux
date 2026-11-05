@@ -64,6 +64,7 @@
           <button class="tab" data-mode="normal"><span class="badge">🎯</span>Normal</button>
           <button class="tab" data-mode="inverse"><span class="badge">🙃</span>Inversé</button>
           <button class="tab" data-mode="mirror"><span class="badge">🪞</span>Miroir</button>
+          <button class="tab" data-mode="duo"><span class="badge">🤝</span>Duo</button>
           <button class="tab" data-mode="blind"><span class="badge">🙈</span>Aveugle</button>
           <button class="tab" data-mode="blitz"><span class="badge">⚡</span>Éclair</button>
         </div>
@@ -189,11 +190,20 @@
         <div class="prob-list blind-probs" id="blindProbs"></div>
       </div>
 
+      <div id="blitzBox" class="setting hidden">
+        <div class="look-label">⚡ Temps pour choisir</div>
+        <div id="blitzChips" class="presets" role="group" aria-label="Temps pour choisir">
+          <button class="chip" data-blitz="2">2 secondes</button>
+          <button class="chip" data-blitz="5">5 secondes</button>
+          <button class="chip" data-blitz="10">10 secondes</button>
+        </div>
+      </div>
+
       <div class="setting">
         <div class="look-label">La main en 3D</div>
         <div id="handSwitch" class="pill-switch wide" data-active="0" role="group" aria-label="Façon de jouer de la main">
           <span class="pill-indicator"></span>
-          <button data-hand="gesture" class="active">✊ Fait le geste</button>
+          <button data-hand="gesture" class="active">✊ Fait le signe</button>
           <button data-hand="object">✂️ Sort l’objet</button>
         </div>
         <p id="handNote" class="muted small"></p>
@@ -270,6 +280,7 @@
           <div class="pad-wrap">
             <div class="pad" id="pad">
               <canvas id="padBack" width="480" height="630"></canvas>
+              <canvas id="padTextLayer" width="480" height="630"></canvas>
               <canvas id="padInk" width="480" height="630" aria-label="Dessine sur la feuille"></canvas>
             </div>
             <div class="pad-tools">
@@ -417,12 +428,22 @@
           <input id="weaponName" class="input grow" type="text" maxlength="18" placeholder="Bombe, Pistolet à eau…">
         </div>
         <div class="field">
-          <label for="weaponVerb">Ce qu’elle fait <small>(« Bombe <em>explose</em> la pierre »)</small></label>
-          <input id="weaponVerb" class="input grow" type="text" maxlength="18" placeholder="bat">
+          <span class="field-title">Son attaque, avec son animation</span>
+          <div id="weaponAttacks" class="presets" role="group" aria-label="Attaque de l'arme"></div>
+          <p id="weaponAttackNote" class="muted small"></p>
         </div>
       </div>
     </div>
     <p id="weaponError" class="error hidden"></p>
+    <h3>Le signe de sa main</h3>
+    <p class="muted small">C’est le signe que fait la main pour jouer cette arme.</p>
+    <div class="hand-edit">
+      <img id="handPreview" class="hand-preview" alt="Aperçu du signe de la main">
+      <div class="hand-controls">
+        <div id="handPresets" class="presets" role="group" aria-label="Signes tout prêts"></div>
+        <div id="handFingers" class="hand-fingers"></div>
+      </div>
+    </div>
     <h3>Contre les autres armes</h3>
     <div id="weaponRelations" class="weapon-relations"></div>
     <div class="dialog-actions">

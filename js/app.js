@@ -3,7 +3,6 @@
 const SAVE_KEY = "pfc-save";
 const PREFS_KEY = "tx-prefs";
 const SAVE_VERSION = 1;
-const BLITZ_MS = 2000;
 const MAX_CUSTOM = 12;
 
 const $ = (id) => document.getElementById(id);
@@ -16,8 +15,11 @@ const MODE_TEXT = {
   inverse: "Tout à l’envers : le combat se déroule normalement, mais c’est celui qui le perd qui marque le point !",
   mirror: "Il faut jouer la même chose. À chaque manche, le 🎯 chasseur marque s’il joue le même coup que le 🏃 fugitif. Sinon, personne ne marque, et les rôles s’échangent.",
   blind: "L’ordi annonce son coup à l’avance… mais il peut mentir. À toi de décider si tu le crois. Tu règles ses chances de mentir dans les réglages.",
-  blitz: "Tu as 2 secondes pour choisir. Passé ce délai, tu perds la manche.",
+  duo: "Vous jouez ensemble : faites le même signe pour marquer tous les deux. Attention, chaque signe différent compte comme un raté.",
 };
+const modeText = (mode) => (mode === "blitz"
+  ? `Tu as ${settings.blitz} secondes pour choisir. Passé ce délai, tu perds la manche. Contre un bot, les manches s’enchaînent toutes seules.`
+  : MODE_TEXT[mode]);
 
 const CHANT = ["Pierre…", "Feuille…", "Ciseaux…", "Go !"];
 
@@ -45,6 +47,7 @@ const DEFAULT_SETTINGS = () => ({
   speed: 1,
   handStyle: "gesture",
   truth: 50,
+  blitz: 2,
   extras: { fire: false, water: false },
   keys: DEFAULT_KEYS(),
   keyLabels: {},
@@ -86,6 +89,8 @@ let timerRaf = 0;
 let timerEnd = 0;
 let timerTicks = 0;
 let lastRecord = null;
+let blitzTimer = 0;
+let blitzPaused = false;
 
 let tour = null;
 let tourSetup = null;
@@ -300,6 +305,8 @@ function humanSide() {
 function cancelRun() {
   runToken++;
   stopTimer();
+  clearTimeout(blitzTimer);
+  blitzPaused = false;
   document.body.classList.remove("busy");
   $("arena").classList.remove("rolling", "skippable", "jackpot");
   $("arena").querySelectorAll(".banner").forEach((b) => b.remove());
@@ -403,6 +410,26 @@ function prepareRound() {
     phase = match.mode === "blitz" ? "ready" : "choose";
   }
   renderAll();
+  if (blitzChains() && !blitzPaused) scheduleBlitz();
+}
+
+// Mode éclair contre un bot : après la première manche, tout s'enchaîne sans cliquer
+const blitzChains = () => !!match && match.mode === "blitz" && phase === "ready" && humanSide() !== null && match.rounds.length > 0;
+
+function scheduleBlitz() {
+  clearTimeout(blitzTimer);
+  const token = runToken;
+  blitzTimer = setTimeout(() => {
+    if (token !== runToken || phase !== "ready" || blitzPaused) return;
+    // Onglet caché : on attend le retour du joueur au lieu de lui faire perdre la manche
+    if (document.hidden) {
+      blitzPaused = true;
+      renderMain();
+      renderInfo();
+      return;
+    }
+    readyToChoose();
+  }, 1400);
 }
 
 function showAnnouncement() {
@@ -426,9 +453,12 @@ function readyToChoose() {
 }
 
 function startTimer() {
+  const total = settings.blitz * 1000;
+  const urgentUnder = Math.max(700, total * 0.3);
+  const tickEvery = settings.blitz === 2 ? 500 : 1000;
   const ring = $("blitzRing");
   ring.classList.remove("hidden", "urgent");
-  timerEnd = performance.now() + BLITZ_MS;
+  timerEnd = performance.now() + total;
   timerTicks = 0;
   const tick = () => {
     const left = timerEnd - performance.now();
@@ -437,13 +467,13 @@ function startTimer() {
       choose(null);
       return;
     }
-    ring.style.setProperty("--left", left / BLITZ_MS);
+    ring.style.setProperty("--left", left / total);
     $("blitzText").textContent = (left / 1000).toFixed(1).replace(".", ",");
-    ring.classList.toggle("urgent", left < 700);
-    const step = Math.floor((BLITZ_MS - left) / 500);
+    ring.classList.toggle("urgent", left < urgentUnder);
+    const step = Math.floor((total - left) / tickEvery);
     if (step > timerTicks) {
       timerTicks = step;
-      Sound.tick(left < 700);
+      Sound.tick(left < urgentUnder);
     }
     timerRaf = requestAnimationFrame(tick);
   };
@@ -534,7 +564,7 @@ function commitRound(a, b, result) {
   if (!isTournament() && settings.opponent === "bot") {
     const list = memory[match.mode] || (memory[match.mode] = []);
     const idx = (id) => (id === null ? null : set.ids.indexOf(id));
-    list.push({ me: idx(b), opp: idx(a), out: record.winner === 1 ? 1 : record.winner === 0 ? -1 : 0 });
+    list.push({ me: idx(b), opp: idx(a), out: record.winner === 1 || record.winner === 2 ? 1 : record.winner === 0 ? -1 : 0 });
     if (list.length > 400) list.splice(0, list.length - 400);
   }
 
@@ -546,8 +576,8 @@ function commitRound(a, b, result) {
     stats.rounds++;
     const mine = record.picks[hs];
     if (mine) stats.weapons[mine] = (stats.weapons[mine] || 0) + 1;
-    if (record.winner === hs) { stats.wins++; stats.streak++; lv.rw++; }
-    else if (record.winner === -1) { stats.draws++; lv.rd++; }
+    if (record.winner === hs || record.winner === 2) { stats.wins++; stats.streak++; lv.rw++; }
+    else if (record.winner === -1 && !result.fail) { stats.draws++; lv.rd++; }
     else { stats.losses++; stats.streak = 0; lv.rl++; }
   }
 
@@ -556,16 +586,19 @@ function commitRound(a, b, result) {
   zone.classList.remove("landed");
   void zone.offsetWidth;
   zone.classList.add("landed");
-  const scoreEl = record.winner === 0 ? $("score0") : record.winner === 1 ? $("score1") : null;
+  const scoreEl = record.winner === 0 || record.winner === 2 ? $("score0") : record.winner === 1 || result.fail ? $("score1") : null;
   if (scoreEl) {
     scoreEl.classList.remove("pop");
     void scoreEl.offsetWidth;
     scoreEl.classList.add("pop");
   }
   setStatus(outcomeHtml(record), true);
-  if (hs === null) {
+  if (result.fail) {
+    Sound.lose();
+    Haptics.buzz(40);
+  } else if (hs === null) {
     if (record.winner === -1) Sound.draw(); else Sound.win();
-  } else if (record.winner === hs) {
+  } else if (record.winner === hs || record.winner === 2) {
     Sound.win();
     Haptics.buzz([20, 40, 30]);
     burst(zone, 26);
@@ -585,6 +618,7 @@ function commitRound(a, b, result) {
 }
 
 function subjectLine(record) {
+  if (record.mode === "duo") return record.winner === 2 ? "Vous marquez ensemble !" : "Raté : ce n’était pas le même signe";
   const hs = record.kinds[0] === "human" && record.kinds[1] === "bot" ? 0 : record.kinds[1] === "human" && record.kinds[0] === "bot" ? 1 : null;
   if (record.winner === -1) return record.mode === "mirror" ? "Personne ne marque" : "Manche nulle";
   if (hs !== null) return record.winner === hs ? "Tu gagnes la manche !" : `${record.names[1 - hs]} gagne la manche`;
@@ -612,16 +646,18 @@ function finishMatch() {
   $("bubble").classList.add("hidden");
   const hs = humanSide();
   const w = match.winner;
+  const duo = match.mode === "duo";
+  const won = duo ? w === 2 : hs === null || w === hs;
   if (hs !== null) {
     const botLevel = match.players[1 - hs].level;
     const lv = stats.levels[botLevel];
     stats.matches++;
     lv.m++;
-    if (w === hs) { stats.matchWins++; lv.w++; } else lv.l++;
+    if (won) { stats.matchWins++; lv.w++; } else lv.l++;
   }
-  const title = hs === null ? `${match.players[w].name} gagne !` : w === hs ? "TU GAGNES !" : "PERDU…";
-  const sub = `${match.score[0]} à ${match.score[1]}`;
-  if (hs === null || w === hs) {
+  const title = duo ? (won ? "GAGNÉ ENSEMBLE !" : "RATÉ ENSEMBLE…") : hs === null ? `${match.players[w].name} gagne !` : won ? "TU GAGNES !" : "PERDU…";
+  const sub = duo ? `${match.score[0]} réussite${match.score[0] > 1 ? "s" : ""}, ${match.score[1]} raté${match.score[1] > 1 ? "s" : ""}` : `${match.score[0]} à ${match.score[1]}`;
+  if (won) {
     setTimeout(() => { Sound.fanfare(); Haptics.buzz([60, 40, 60, 40, 200]); }, 240);
     showBanner(title, sub);
     burst($("arena"), 40, true);
@@ -647,6 +683,18 @@ function mainAction() {
     }
     if (phase === "over") return closeTourMatch();
   }
+  if (blitzChains()) {
+    Sound.click();
+    if (!blitzPaused) {
+      blitzPaused = true;
+      clearTimeout(blitzTimer);
+      renderMain();
+      renderInfo();
+      return;
+    }
+    blitzPaused = false;
+    return readyToChoose();
+  }
   if (phase === "curtain" || phase === "ready") return readyToChoose();
   Sound.click();
   newMatch();
@@ -667,7 +715,8 @@ function mainLabel() {
   }
   if (isTournament() && phase === "over") return ["🏆 Retour au tableau", false];
   if (phase === "curtain") return [`👀 C’est bon, je suis ${match.players[chooser].name}`, false];
-  if (phase === "ready") return [match.rounds.length ? "⚡ Manche suivante" : "⚡ C’est parti !", false];
+  if (blitzChains()) return [blitzPaused ? "▶ Reprendre" : "⏸ Pause", false];
+  if (phase === "ready") return ["⚡ C’est parti !", false];
   return ["🔁 Rejouer", false];
 }
 
@@ -698,11 +747,12 @@ function renderVisibility() {
   $("tourResetBtn").classList.toggle("hidden", !(isTournament() && tour && tour.champion === null && !tourBusy));
   $("levelBox").classList.toggle("hidden", settings.opponent !== "bot");
   $("blindBox").classList.toggle("hidden", settings.mode !== "blind");
+  $("blitzBox").classList.toggle("hidden", settings.mode !== "blitz");
 }
 
 function renderTabs() {
   document.querySelectorAll("#modeTabs .tab").forEach((t) => t.classList.toggle("active", t.dataset.mode === settings.mode));
-  $("modeDesc").textContent = MODE_TEXT[settings.mode] + (settings.mode === "blind" && settings.opponent === "human" ? " (Il faut un ordi pour ça : ce mode se joue contre lui.)" : "");
+  $("modeDesc").textContent = modeText(settings.mode) + (settings.mode === "blind" && settings.opponent === "human" ? " (Il faut un ordi pour ça : ce mode se joue contre lui.)" : "");
   $("rulesLink").href = `regles.html#${isTournament() ? "tournoi" : Rules.MODES[settings.mode].anchor}`;
   const oppIndex = { bot: 0, human: 1, tournament: 2 }[settings.opponent];
   setPill($("oppSwitch"), oppIndex);
@@ -712,19 +762,25 @@ function renderScore() {
   const bar = $("turnBar");
   if (!match) return;
   const choosing = (phase === "choose" || phase === "ready" || phase === "curtain");
+  const duo = match.mode === "duo";
+  const over = phase === "over";
   let active = chooser;
-  if (phase === "over") active = match.winner;
+  if (over) active = duo ? (match.winner === 2 ? 0 : 1) : match.winner;
   bar.dataset.active = active;
-  bar.classList.toggle("waiting", !(choosing || phase === "over"));
-  bar.classList.toggle("choosing", choosing);
+  bar.classList.toggle("waiting", duo ? !over : !(choosing || over));
+  bar.classList.toggle("choosing", choosing && !duo);
   [0, 1].forEach((s) => {
     const side = bar.querySelector(`.turn-side[data-p="${s}"]`);
-    side.classList.toggle("active", (choosing || phase === "over") && active === s);
-    $(`name${s}`).textContent = match.players[s].name + (match.players[s].kind === "bot" ? ` · niv. ${match.players[s].level}` : "");
+    side.classList.toggle("active", ((choosing && !duo) || over) && active === s);
+    const label = duo ? (s === 0 ? "🤝 Ensemble" : "❌ Ratés") : match.players[s].name + (match.players[s].kind === "bot" ? ` · niv. ${match.players[s].level}` : "");
+    $(`name${s}`).textContent = label;
     $(`score${s}`).textContent = match.score[s];
-    $(`role${s}`).textContent = match.mode === "mirror" && phase !== "over" ? (match.hunter === s ? "🎯 Chasseur" : "🏃 Fugitif") : "";
+    $(`role${s}`).textContent = match.mode === "mirror" && !over ? (match.hunter === s ? "🎯 Chasseur" : "🏃 Fugitif") : "";
     const pips = $(`pips${s}`);
-    if (match.target <= 10) {
+    // En duo « premier à X », les ratés ne font pas perdre : ils sont juste comptés
+    if (duo && s === 1 && match.format.type === "first") {
+      pips.innerHTML = "";
+    } else if (match.target <= 10) {
       let html = "";
       for (let k = 0; k < match.target; k++) html += `<span class="pip${k < match.score[s] ? " on" : ""}"></span>`;
       pips.innerHTML = html;
@@ -763,7 +819,7 @@ function renderCurtain() {
   const other = 1 - chooser;
   const already = picks[other] !== undefined;
   $("curtainTitle").textContent = `À toi, ${match.players[chooser].name} !`;
-  $("curtainText").textContent = `${match.players[other].name}, regarde ailleurs${already ? " : ton choix est gardé secret." : "."} ${match.mode === "blitz" ? "Le chrono de 2 secondes part dès que tu cliques." : "Clique quand tu es prêt."}`;
+  $("curtainText").textContent = `${match.players[other].name}, regarde ailleurs${already ? " : ton choix est gardé secret." : "."} ${match.mode === "blitz" ? `Le chrono de ${settings.blitz} secondes part dès que tu cliques.` : "Clique quand tu es prêt."}`;
   c.classList.remove("hidden");
 }
 
@@ -778,14 +834,21 @@ function renderInfo() {
   const info = $("moveInfo");
   if (!match) { info.textContent = ""; }
   else if (phase === "choose") {
-    const mirror = match.mode === "mirror" ? (match.hunter === chooser ? " 🎯 Essaie de jouer le même coup." : " 🏃 Évite de jouer le même coup.") : "";
+    const mirror = match.mode === "mirror" ? (match.hunter === chooser ? " 🎯 Essaie de jouer le même coup." : " 🏃 Évite de jouer le même coup.") : match.mode === "duo" ? " 🤝 Essayez de jouer la même chose." : "";
     info.textContent = match.players[1 - chooser].kind === "human" ? `${match.players[chooser].name}, choisis en secret.${mirror}` : `Choisis ton coup.${mirror}`;
-  } else if (phase === "ready") info.textContent = "Prépare-toi : tu auras 2 secondes.";
+  } else if (phase === "ready") {
+    if (blitzChains()) info.textContent = blitzPaused ? "En pause. Reprends quand tu veux." : "Prépare-toi : la manche suivante arrive…";
+    else info.textContent = `Prépare-toi : tu auras ${settings.blitz} secondes.`;
+  }
   else if (phase === "anim") info.textContent = "Clique sur la scène pour accélérer.";
   else if (phase === "auto") info.textContent = "Les deux bots réfléchissent…";
   else if (phase === "over") {
-    const w = match.players[match.winner];
-    info.textContent = `${w.name} gagne la partie ${match.score[match.winner]} à ${match.score[1 - match.winner]}.`;
+    if (match.mode === "duo") {
+      info.textContent = match.winner === 2 ? "Vous avez gagné tous les deux !" : "Vous avez perdu tous les deux. Pas assez synchronisés…";
+    } else {
+      const w = match.players[match.winner];
+      info.textContent = `${w.name} gagne la partie ${match.score[match.winner]} à ${match.score[1 - match.winner]}.`;
+    }
   } else info.textContent = "";
   renderHint();
 }
@@ -874,10 +937,11 @@ function renderHistory() {
       head = `<div class="round-match">${esc(Rules.MODES[r.mode].emoji)} ${esc(r.names[0])}${lvl(0)} contre ${esc(r.names[1])}${lvl(1)} · ${esc(r.format)}</div>`;
     }
     const hs = r.kinds[0] === "human" && r.kinds[1] === "bot" ? 0 : r.kinds[1] === "human" && r.kinds[0] === "bot" ? 1 : null;
-    const good = r.winner !== -1 && hs !== null && r.winner === hs;
-    const bad = r.winner !== -1 && hs !== null && r.winner !== hs;
+    const duo = r.mode === "duo";
+    const good = duo ? r.winner === 2 : r.winner !== -1 && hs !== null && r.winner === hs;
+    const bad = duo ? r.winner !== 2 : r.winner !== -1 && hs !== null && r.winner !== hs;
     const pick = (s) => (r.picks[s] ? iconHtml(r.picks[s], s) : `<span class="w-emoji" title="Trop tard">⏱️</span>`);
-    const short = r.winner === -1 ? "Nulle" : hs !== null ? (good ? "Gagnée" : "Perdue") : r.names[r.winner];
+    const short = duo ? (r.winner === 2 ? "Réussie" : "Ratée") : r.winner === -1 ? "Nulle" : hs !== null ? (good ? "Gagnée" : "Perdue") : r.names[r.winner];
     let extra = "";
     const botSide = r.kinds[1] === "bot" ? 1 : r.kinds[0] === "bot" ? 0 : null;
     if (botSide !== null && r.brain[botSide]) {
@@ -936,8 +1000,9 @@ function renderSettings() {
   if (document.activeElement !== $("firstTo")) $("firstTo").value = settings.firstTo;
   setPill($("handSwitch"), settings.handStyle === "gesture" ? 0 : 1);
   $("handNote").textContent = settings.handStyle === "gesture"
-    ? "La main fait le geste (poing, main ouverte, V), puis l’arme apparaît pour le combat."
-    : "La main sort la vraie pierre, déroule la feuille et fait claquer les ciseaux.";
+    ? "Pas d’objet : les mains font le signe (poing, main ouverte, V) et se battent entre elles."
+    : "La main tient le vrai objet : la pierre dans la paume, la feuille pincée, les ciseaux dans les doigts.";
+  document.querySelectorAll("#blitzChips .chip").forEach((c) => c.classList.toggle("active", Number(c.dataset.blitz) === settings.blitz));
   document.querySelectorAll("#speedChips .chip").forEach((c) => c.classList.toggle("active", Number(c.dataset.speed) === settings.speed));
   $("speedName").textContent = settings.speed >= 40 ? "instantané" : `×${String(settings.speed).replace(".", ",")}`;
   if (Stage.ok) {
@@ -1159,8 +1224,23 @@ function sideNames() {
 const pad = { color: INK_COLORS[0], size: 10, tool: "pen", drawing: false, undo: [], last: null };
 
 function drawPadBack() {
-  const c = $("padBack");
-  Textures.drawPaper(c.getContext("2d"), c.width, c.height, cosmetics[cosSide].paper);
+  const back = $("padBack");
+  Textures.drawPaperBase(back.getContext("2d"), back.width, back.height);
+  const layer = $("padTextLayer");
+  const g = layer.getContext("2d");
+  g.globalCompositeOperation = "source-over";
+  g.clearRect(0, 0, layer.width, layer.height);
+  const paper = cosmetics[cosSide].paper;
+  if (paper.textInk) {
+    const side = cosSide;
+    Textures.preload([paper.textInk]).then(([img]) => {
+      if (side !== cosSide) return;
+      g.clearRect(0, 0, layer.width, layer.height);
+      g.drawImage(img, 0, 0, layer.width, layer.height);
+    });
+  } else {
+    Textures.drawPaperText(g, layer.width, layer.height, paper);
+  }
 }
 
 function loadPadInk() {
@@ -1172,9 +1252,7 @@ function loadPadInk() {
   const ink = cosmetics[cosSide].paper.ink;
   if (ink) {
     const side = cosSide;
-    const img = new Image();
-    img.onload = () => { if (side === cosSide) g.drawImage(img, 0, 0, c.width, c.height); };
-    img.src = ink;
+    Textures.preload([ink]).then(([img]) => { if (side === cosSide) g.drawImage(img, 0, 0, c.width, c.height); });
   }
 }
 
@@ -1185,25 +1263,53 @@ function padPoint(e) {
 }
 
 function padStroke(from, to) {
-  const g = $("padInk").getContext("2d");
-  g.globalCompositeOperation = pad.tool === "eraser" ? "destination-out" : "source-over";
-  g.strokeStyle = pad.color;
-  g.lineWidth = pad.tool === "eraser" ? pad.size * 2.4 : pad.size;
-  g.lineCap = "round";
-  g.lineJoin = "round";
-  g.beginPath();
-  g.moveTo(from.x, from.y);
-  g.lineTo(to.x + 0.01, to.y);
-  g.stroke();
+  const erasing = pad.tool === "eraser";
+  // La gomme efface le dessin et le texte, jamais le papier
+  const layers = erasing ? [$("padInk"), $("padTextLayer")] : [$("padInk")];
+  layers.forEach((layer) => {
+    const g = layer.getContext("2d");
+    g.globalCompositeOperation = erasing ? "destination-out" : "source-over";
+    g.strokeStyle = pad.color;
+    g.lineWidth = erasing ? pad.size * 2.4 : pad.size;
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    g.beginPath();
+    g.moveTo(from.x, from.y);
+    g.lineTo(to.x + 0.01, to.y);
+    g.stroke();
+    g.globalCompositeOperation = "source-over";
+  });
+  if (erasing) pad.erasedText = true;
+}
+
+function padSnapshot() {
+  const ink = $("padInk"), layer = $("padTextLayer");
+  const paper = cosmetics[cosSide].paper;
+  return {
+    ink: ink.getContext("2d").getImageData(0, 0, ink.width, ink.height),
+    layer: layer.getContext("2d").getImageData(0, 0, layer.width, layer.height),
+    text: paper.text,
+    textInk: paper.textInk,
+  };
+}
+
+function padPushUndo() {
+  pad.undo.push(padSnapshot());
+  if (pad.undo.length > 15) pad.undo.shift();
 }
 
 function padSave() {
   const c = $("padInk");
+  const paper = cosmetics[cosSide].paper;
   const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
   let used = false;
   for (let i = 3; i < data.length; i += 16) if (data[i]) { used = true; break; }
-  cosmetics[cosSide].paper.ink = used ? c.toDataURL("image/png") : null;
-  cosChanged(cosSide, ["paper"]);
+  paper.ink = used ? c.toDataURL("image/png") : null;
+  // Une fois gommé, le texte est gardé tel quel, comme une image
+  if (pad.erasedText && (paper.text || "").trim()) paper.textInk = $("padTextLayer").toDataURL("image/png");
+  pad.erasedText = false;
+  const side = cosSide;
+  Textures.preload([paper.ink, paper.textInk]).then(() => cosChanged(side, ["paper"]));
 }
 
 function bindPad() {
@@ -1211,9 +1317,7 @@ function bindPad() {
   ink.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     ink.setPointerCapture(e.pointerId);
-    const g = ink.getContext("2d");
-    pad.undo.push(g.getImageData(0, 0, ink.width, ink.height));
-    if (pad.undo.length > 15) pad.undo.shift();
+    padPushUndo();
     pad.drawing = true;
     pad.last = padPoint(e);
     padStroke(pad.last, pad.last);
@@ -1236,6 +1340,13 @@ function bindPad() {
     if (!b) return;
     pad.color = b.dataset.c;
     if (pad.tool === "eraser") pad.tool = "pen";
+    // Le texte prend la couleur choisie, tant qu'il n'a pas été gommé
+    const paper = cosmetics[cosSide].paper;
+    if (!paper.textInk && (paper.text || "").trim()) {
+      paper.textColor = pad.color;
+      drawPadBack();
+      cosChanged(cosSide, ["paper"]);
+    }
     Sound.click();
     renderCos();
   });
@@ -1253,21 +1364,33 @@ function bindPad() {
   $("padUndo").addEventListener("click", () => {
     const shot = pad.undo.pop();
     if (!shot) return;
-    ink.getContext("2d").putImageData(shot, 0, 0);
+    ink.getContext("2d").putImageData(shot.ink, 0, 0);
+    $("padTextLayer").getContext("2d").putImageData(shot.layer, 0, 0);
+    const paper = cosmetics[cosSide].paper;
+    paper.text = shot.text;
+    paper.textInk = shot.textInk;
+    $("padText").value = paper.text || "";
     Sound.click();
     padSave();
   });
   $("padClear").addEventListener("click", () => {
-    const g = ink.getContext("2d");
-    pad.undo.push(g.getImageData(0, 0, ink.width, ink.height));
-    g.globalCompositeOperation = "source-over";
-    g.clearRect(0, 0, ink.width, ink.height);
+    padPushUndo();
+    [ink, $("padTextLayer")].forEach((layer) => {
+      const g = layer.getContext("2d");
+      g.globalCompositeOperation = "source-over";
+      g.clearRect(0, 0, layer.width, layer.height);
+    });
+    const paper = cosmetics[cosSide].paper;
+    paper.text = "";
+    paper.textInk = null;
+    $("padText").value = "";
     Sound.click();
     padSave();
   });
   let textTimer;
   $("padText").addEventListener("input", (e) => {
     cosmetics[cosSide].paper.text = e.target.value;
+    cosmetics[cosSide].paper.textInk = null;
     cosmetics[cosSide].paper.textColor = pad.color;
     drawPadBack();
     clearTimeout(textTimer);
@@ -1360,16 +1483,58 @@ function openWeaponDialog(id = null) {
   editing = {
     id,
     image: existing ? existing.image : null,
+    attack: existing && Rules.ATTACKS[existing.attack] ? existing.attack : "eject",
+    hand: existing && existing.hand ? { ...existing.hand } : { ...HAND_PRESETS[0].states },
     rel: Object.fromEntries(others.map((o) => [o, existing ? fs.rel(id, o) : 0])),
   };
   $("weaponTitle").textContent = existing ? `Modifier ${existing.name}` : "Créer une arme";
   $("weaponName").value = existing ? existing.name : "";
-  $("weaponVerb").value = existing ? (existing.verb || "") : "";
   $("weaponError").classList.add("hidden");
   $("weaponDelete").classList.toggle("hidden", !existing);
   renderWeaponImage();
   renderWeaponRelations();
+  renderWeaponAttacks();
+  renderWeaponHand();
   $("weaponDialog").showModal();
+}
+
+const ATTACK_NOTES = {
+  charge: "Elle recule, fonce, et l’autre vole en éclats.",
+  eject: "Un énorme coup envoie l’autre hors de l’écran.",
+  explode: "Elle gonfle, tremble, et tout saute.",
+  crush: "Elle monte, retombe de tout son poids et aplatit l’autre.",
+  slice: "Un passage éclair, puis l’autre se sépare en deux.",
+  suck: "Un tourbillon avale l’autre.",
+  zap: "Des éclairs de plus en plus forts frappent l’autre.",
+};
+
+const HAND_PRESETS = [
+  { label: "👉 Pointe", states: { thumb: 2, index: 0, middle: 2, ring: 2, pinky: 2 } },
+  { label: "✊ Poing", states: { thumb: 2, index: 2, middle: 2, ring: 2, pinky: 2 } },
+  { label: "✋ Ouverte", states: { thumb: 0, index: 0, middle: 0, ring: 0, pinky: 0 } },
+  { label: "✌️ V", states: { thumb: 2, index: 0, middle: 0, ring: 2, pinky: 2 } },
+  { label: "🤟 Love", states: { thumb: 0, index: 0, middle: 2, ring: 2, pinky: 0 } },
+  { label: "🤘 Cornes", states: { thumb: 2, index: 0, middle: 2, ring: 2, pinky: 0 } },
+  { label: "👍 Pouce", states: { thumb: 0, index: 2, middle: 2, ring: 2, pinky: 2 } },
+  { label: "🤙 Appel", states: { thumb: 0, index: 2, middle: 2, ring: 2, pinky: 0 } },
+];
+const HAND_FINGERS = [["thumb", "Pouce"], ["index", "Index"], ["middle", "Majeur"], ["ring", "Annulaire"], ["pinky", "Auriculaire"]];
+
+function renderWeaponAttacks() {
+  $("weaponAttacks").innerHTML = Object.entries(Rules.ATTACKS).map(([key, a]) => `<button type="button" class="chip${key === editing.attack ? " active" : ""}" data-attack="${key}">${a.label}</button>`).join("");
+  $("weaponAttackNote").textContent = ATTACK_NOTES[editing.attack];
+}
+
+function renderWeaponHand() {
+  const same = (a, b) => HAND_FINGERS.every(([f]) => a[f] === b[f]);
+  $("handPresets").innerHTML = HAND_PRESETS.map((p, i) => `<button type="button" class="chip${same(p.states, editing.hand) ? " active" : ""}" data-preset="${i}">${p.label}</button>`).join("");
+  $("handFingers").innerHTML = HAND_FINGERS.map(([key, label]) => {
+    const chip = (v, text) => `<button type="button" class="chip${editing.hand[key] === v ? " active" : ""}" data-finger="${key}" data-v="${v}">${text}</button>`;
+    return `<div class="finger-row"><span>${label}</span><span class="presets">${chip(0, "Tendu")}${chip(1, "Mi-plié")}${chip(2, "Plié")}</span></div>`;
+  }).join("");
+  const url = Stage.ok ? Stage.handThumbnail(0, editing.hand) : null;
+  $("handPreview").classList.toggle("hidden", !url);
+  if (url) $("handPreview").src = url;
 }
 
 function renderWeaponImage() {
@@ -1433,13 +1598,12 @@ function saveWeapon() {
     error.classList.remove("hidden");
     return;
   }
-  const verb = $("weaponVerb").value.trim();
   let weapon;
   if (editing.id) {
     weapon = customs.find((c) => c.id === editing.id);
-    Object.assign(weapon, { name, verb, image: editing.image });
+    Object.assign(weapon, { name, attack: editing.attack, hand: editing.hand, image: editing.image });
   } else {
-    weapon = { id: `c${Date.now().toString(36)}`, name, verb, image: editing.image, enabled: true, emoji: "⭐", tint: "#9b6dff" };
+    weapon = { id: `c${Date.now().toString(36)}`, name, attack: editing.attack, hand: editing.hand, image: editing.image, enabled: true, emoji: "⭐", tint: "#9b6dff" };
     customs.push(weapon);
   }
   Object.entries(editing.rel).forEach(([o, v]) => setRelation(weapon.id, o, v));
@@ -1701,6 +1865,7 @@ function cleanSettings(raw) {
   if (s.format.type === "bo" && ![3, 5, 10].includes(s.format.n)) s.format.n = 3;
   s.firstTo = Math.max(1, Math.min(999, Math.round(Number(s.firstTo)) || 5));
   if (![0.5, 1, 1.5, 2, 3, 40].includes(s.speed)) s.speed = 1;
+  if (![2, 5, 10].includes(s.blitz)) s.blitz = 2;
   if (!["gesture", "object"].includes(s.handStyle)) s.handStyle = "gesture";
   s.truth = Math.max(0, Math.min(100, Number(s.truth)));
   if (Number.isNaN(s.truth)) s.truth = 50;
@@ -1728,9 +1893,17 @@ function cleanCosmetics(raw) {
         text: c.paper && typeof c.paper.text === "string" ? c.paper.text.slice(0, 60) : def.paper.text,
         textColor: c.paper && isHex(c.paper.textColor) ? c.paper.textColor : def.paper.textColor,
         ink: c.paper && typeof c.paper.ink === "string" && c.paper.ink.startsWith("data:image/") ? c.paper.ink : null,
+        textInk: c.paper && typeof c.paper.textInk === "string" && c.paper.textInk.startsWith("data:image/") ? c.paper.textInk : null,
       },
     };
   });
+}
+
+function cleanHand(raw) {
+  const out = {};
+  const fallback = { thumb: 2, index: 0, middle: 2, ring: 2, pinky: 2 };
+  Object.keys(fallback).forEach((f) => { out[f] = raw && [0, 1, 2].includes(raw[f]) ? raw[f] : fallback[f]; });
+  return out;
 }
 
 function cleanCustoms(raw) {
@@ -1738,7 +1911,8 @@ function cleanCustoms(raw) {
   return raw.slice(0, MAX_CUSTOM).filter((c) => c && typeof c.id === "string" && typeof c.name === "string").map((c) => ({
     id: c.id,
     name: c.name.slice(0, 18),
-    verb: typeof c.verb === "string" ? c.verb.slice(0, 18) : "",
+    attack: Rules.ATTACKS[c.attack] ? c.attack : "charge",
+    hand: cleanHand(c.hand),
     image: typeof c.image === "string" && c.image.startsWith("data:image/") ? c.image : null,
     enabled: c.enabled !== false,
     emoji: "⭐",
@@ -1766,7 +1940,7 @@ function shareable() {
   return {
     settings: { ...settings },
     overrides,
-    cosmetics: cosmetics.map((c) => ({ ...c, paper: { ...c.paper, ink: null } })),
+    cosmetics: cosmetics.map((c) => ({ ...c, paper: { ...c.paper, ink: null, textInk: null } })),
   };
 }
 
@@ -1818,6 +1992,7 @@ async function importFile(file) {
     const data = JSON.parse(await file.text());
     if (!data || typeof data !== "object" || !data.settings) throw new Error("format");
     restoreData(data);
+    await preloadPaper();
     afterLoad();
     $("shareDialog").close();
     toast("Sauvegarde chargée 📂");
@@ -1826,6 +2001,8 @@ async function importFile(file) {
     error.classList.remove("hidden");
   }
 }
+
+const preloadPaper = () => Textures.preload(cosmetics.flatMap((c) => [c.paper.ink, c.paper.textInk]));
 
 function afterLoad() {
   if (!tourSetup) tourSetup = defaultTourSetup();
@@ -1919,6 +2096,13 @@ function bindUI() {
         settings.opponent = "bot";
         toast("Le mode aveugle se joue contre l’ordi 🤖");
       }
+      if (settings.mode === "duo" && isTournament()) {
+        tourToken++;
+        tourBusy = false;
+        tourMatch = null;
+        settings.opponent = "bot";
+        toast("En duo, on gagne ensemble : pas de tournoi 🤝");
+      }
     });
     renderCos();
   });
@@ -1933,6 +2117,10 @@ function bindUI() {
     if (settings.mode === "blind" && settings.opponent === "human") {
       settings.mode = "normal";
       toast("Le mode aveugle se joue contre l’ordi : retour au mode normal");
+    }
+    if (settings.mode === "duo" && isTournament()) {
+      settings.mode = "normal";
+      toast("En duo, on gagne ensemble : le tournoi se joue en mode normal");
     }
     Sound.click();
     match = null;
@@ -2000,6 +2188,13 @@ function bindUI() {
     Sound.click();
     renderBlind();
     blindChanged();
+  });
+
+  $("blitzChips").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip");
+    if (!c) return;
+    const seconds = Number(c.dataset.blitz);
+    if (seconds !== settings.blitz) changeSetting(() => { settings.blitz = seconds; });
   });
 
   $("handSwitch").addEventListener("click", (e) => {
@@ -2203,6 +2398,27 @@ function bindUI() {
     Sound.click();
     renderWeaponRelations();
   });
+  $("weaponAttacks").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip");
+    if (!c) return;
+    editing.attack = c.dataset.attack;
+    Sound.click();
+    renderWeaponAttacks();
+  });
+  $("handPresets").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip");
+    if (!c) return;
+    editing.hand = { ...HAND_PRESETS[Number(c.dataset.preset)].states };
+    Sound.click();
+    renderWeaponHand();
+  });
+  $("handFingers").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip");
+    if (!c) return;
+    editing.hand[c.dataset.finger] = Number(c.dataset.v);
+    Sound.click();
+    renderWeaponHand();
+  });
   $("weaponSave").addEventListener("click", saveWeapon);
   $("weaponDelete").addEventListener("click", () => {
     const w = customs.find((c) => c.id === editing.id);
@@ -2319,6 +2535,7 @@ async function start() {
     window.history.replaceState(null, "", location.pathname);
   }
 
+  await preloadPaper();
   [0, 1].forEach((s) => Stage.setCosmetics(s, cosmetics[s]));
   Stage.init($("stage3d"), $("arena"));
   Stage.hooks.beat = (i) => {

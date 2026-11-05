@@ -72,6 +72,7 @@
         <a class="chip" href="#normal">🎯 Normal</a>
         <a class="chip" href="#inverse">🙃 Inversé</a>
         <a class="chip" href="#miroir">🪞 Miroir</a>
+        <a class="chip" href="#duo">🤝 Duo</a>
         <a class="chip" href="#aveugle">🙈 Aveugle</a>
         <a class="chip" href="#eclair">⚡ Éclair</a>
         <a class="chip" href="#armes">🔥 Armes</a>
@@ -110,6 +111,18 @@
       <p class="info">💡 Tu ne marques que quand tu es chasseur. Quand tu es fugitif, ton seul but est d’empêcher l’autre de marquer.</p>
     </section>
 
+    <section class="card rules-card" id="duo">
+      <h2>🤝 Duo</h2>
+      <p><strong>But :</strong> faire le même signe, pour gagner tous les deux. Vous jouez dans la même équipe, contre l’ordi ou à deux.</p>
+      <ol>
+        <li>Si vous jouez la même arme, l’équipe marque un point.</li>
+        <li>Si vos armes sont différentes, c’est un raté.</li>
+        <li><strong>Meilleur des 3, 5 ou 10 :</strong> vous gagnez ensemble si les réussites arrivent au but avant les ratés. Sinon, vous perdez ensemble.</li>
+        <li><strong>Premier à X :</strong> vous continuez jusqu’à X réussites, et les ratés sont seulement comptés.</li>
+      </ol>
+      <p class="info">💡 Contre l’ordi, il essaie vraiment de jouer comme toi. Plus son niveau est haut et plus tu es régulier, plus vous vous comprenez. Ce mode ne se joue pas en tournoi.</p>
+    </section>
+
     <section class="card rules-card" id="aveugle">
       <h2>🙈 Aveugle</h2>
       <p><strong>But :</strong> gagner en décidant si tu crois l’ordi. Ce mode se joue uniquement contre l’ordi.</p>
@@ -123,11 +136,12 @@
 
     <section class="card rules-card" id="eclair">
       <h2>⚡ Éclair</h2>
-      <p><strong>But :</strong> les règles normales, avec <strong>2 secondes</strong> pour choisir.</p>
+      <p><strong>But :</strong> les règles normales, avec <strong>2, 5 ou 10 secondes</strong> pour choisir (2 par défaut, à régler dans les réglages).</p>
       <ol>
-        <li>Clique sur <em>Manche suivante</em> ou appuie sur <kbd>Espace</kbd> : le chrono démarre aussitôt.</li>
+        <li>Clique sur <em>C’est parti</em> ou appuie sur <kbd>Espace</kbd> : le chrono démarre aussitôt.</li>
+        <li>Contre un bot, les manches s’enchaînent ensuite toutes seules. Le bouton <em>Pause</em> arrête l’enchaînement entre deux manches.</li>
         <li>Si tu n’as pas joué à temps, tu perds la manche.</li>
-        <li>À deux, chacun a ses 2 secondes. Si aucun des deux ne joue à temps, la manche est nulle.</li>
+        <li>À deux, chacun a son temps, et on clique avant chaque tour. Si aucun des deux ne joue à temps, la manche est nulle.</li>
       </ol>
     </section>
 
@@ -148,6 +162,8 @@
       <h3>Créer une arme</h3>
       <ol>
         <li>Clique sur <em>Créer une arme</em>, donne-lui un nom et importe une image.</li>
+        <li>Choisis son attaque, avec son animation : <strong>fonce</strong>, <strong>éjecte</strong>, <strong>explose</strong>, <strong>écrase</strong>, <strong>tranche</strong>, <strong>aspire</strong> ou <strong>foudroie</strong>.</li>
+        <li>Choisis le signe de sa main, tout prêt ou doigt par doigt.</li>
         <li>Pour chaque autre arme, indique si la tienne gagne, perd, ou si rien ne se passe.</li>
         <li>Le tableau <em>Qui bat qui ?</em> te laisse tout changer d’un clic, sauf pierre, feuille et ciseaux entre eux.</li>
       </ol>
@@ -171,6 +187,12 @@
       <ul>
         <li><strong>Meilleur des 3, 5 ou 10 :</strong> il faut 2, 3 ou 6 points pour gagner. Les manches nulles ne comptent pas. À 5-5, le point suivant décide.</li>
         <li><strong>Premier à X :</strong> tu choisis le nombre de points, de 1 à 999.</li>
+      </ul>
+
+      <h3>La main en 3D</h3>
+      <ul>
+        <li><strong>Fait le signe :</strong> pas d’objet. Les mains font le signe et se battent entre elles.</li>
+        <li><strong>Sort l’objet :</strong> la main tient le vrai objet et le lance, puis les objets s’affrontent.</li>
       </ul>
 
       <h3>Jouer à deux</h3>
