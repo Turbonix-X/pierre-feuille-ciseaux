@@ -24,7 +24,7 @@ const modeText = (mode) => (mode === "blitz"
 const CHANT = ["Pierre…", "Feuille…", "Ciseaux…", "Go !"];
 
 const COLOR_PRESETS = ["#ffd60a", "#9b6dff", "#e8336f", "#1d4ed8", "#0f7b5f", "#f3f1f8", "#16141c"];
-const SKIN_PRESETS = ["#fde0c8", "#f5c8a0", "#e5a97c", "#c98a5b", "#a56a3f", "#7a4a2a", "#4f2f1c"];
+const SKIN_PRESETS = ["#fde0c8", "#f5c8a0", "#e5a97c", "#c98a5b", "#a56a3f", "#7a4a2a", "#1a0f0a"];
 const ROCK_SHADES = [
   ["#121214", "Noir de jais"], ["#23252a", "Noir charbon"], ["#34373d", "Anthracite"], ["#4b4f57", "Ardoise"],
   ["#6c7078", "Gris"], ["#92969e", "Gris clair"], ["#bcc0c6", "Gris perle"],

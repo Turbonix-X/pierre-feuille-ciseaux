@@ -267,7 +267,8 @@ const Stage = (() => {
   }
 
   function setSkin(h, hex) {
-    h.skin.color.set(hex);
+    // Le code couleur est en sRGB : sans cette conversion, toutes les peaux ressortent bien plus claires que la pastille
+    h.skin.color.set(hex).convertSRGBToLinear();
     h.nailMat.color.copy(h.skin.color).lerp(new THREE.Color(0xffffff), 0.62);
   }
 
@@ -2391,9 +2392,11 @@ const Stage = (() => {
     h.pose = typeof pose === "string" ? flatPose(POSES[pose]) : poseFromStates(pose);
     applyPose(h);
     h.mirror.scale.x = 1;
-    h.root.position.set(-0.78, -0.08, 0);
-    h.wrist.rotation.set(0.05, 0.25, 0.5);
-    h.arm.rotation.z = 0.5;
+    // Le bras pivote au coude, loin hors du cadre : on replace la racine pour garder le poignet dans l'image
+    const tilt = 0.5;
+    h.root.position.set(-0.78 + ELBOW - ELBOW * Math.cos(tilt), -0.08 - ELBOW * Math.sin(tilt), 0);
+    h.arm.rotation.z = tilt;
+    h.wrist.rotation.set(0.05, 0.25, 0);
     h.mirror.scale.multiplyScalar(0.92);
     const url = renderThumb(h.mirror);
     h.mirror.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
